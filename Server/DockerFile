@@ -1,0 +1,3 @@
+FROM node
+WORKDIR /Server/index
+COPY package
