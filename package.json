@@ -6,7 +6,8 @@
   "scripts": {
     "Server": "nodemon Server /index.js --prefix Server",
     "Client":"npm run dev --prefix Client",
-    "dev":"concurrently \"npm run Server\" \"npm run Client\""
+    "dev":"concurrently \"npm run Server\" \"npm run Client\"",
+    "vercel-build":"echo hello"
   },
   "keywords": [],
   "author": "",
