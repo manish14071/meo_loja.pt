@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server:{
     proxy:{
-      "/api/":"http://localhost:6000",
+      "/api/":"https://server-rho-two-92.vercel.app/",
       "/uploads/":"http://localhost:6000",
     },
   },
