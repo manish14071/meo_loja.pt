@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server:{
     proxy:{
-      "/api/":"http://localhost:6000",
+      "/api/":"https://meo-loja.onrender.com",
       "/uploads/":"http://localhost:6000",
     },
   },
