@@ -24,6 +24,7 @@ import HeartIcon from "./HeartIcon";
 
 const Product = () => {
   const { id: productId } = useParams();
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

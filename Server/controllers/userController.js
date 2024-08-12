@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import bcrypt from "bcryptjs";
-import createToken from "../utils/token.js";
+import generateToken from "../utils/token.js";
 
 const createUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
@@ -18,7 +18,7 @@ const createUser = asyncHandler(async (req, res) => {
 
   try {
     await newUser.save();
-    createToken(res, newUser._id);
+    generateToken(res, newUser._id);
     res.status(201).json({
       _id: newUser._id,
       username: newUser.username,
@@ -41,7 +41,7 @@ const loginUser = asyncHandler(async (req, res) => {
       existingUser.password
     );
     if (isPasswordValid) {
-      createToken(res, existingUser._id);
+      generateToken(res, existingUser._id);
       res.status(201).json({
         _id: existingUser._id,
         username: existingUser.username,

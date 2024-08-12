@@ -1,3 +1,13 @@
-FROM node
-WORKDIR /Server/index
-COPY package
+FROM node:18-bookworm-slim
+WORKDIR /myapp
+COPY package.json .
+
+COPY package-lock.json .
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 3267
+
+CMD [ "npm", "run", "Server" ]
