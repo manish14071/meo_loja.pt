@@ -121,7 +121,7 @@ const AdminProductUpdate = () => {
         position: toast.POSITION.TOP_RIGHT,
         autoClose: 2000,
       });
-      navigate("/admin/allproductlist");
+      navigate("/admin/allproductslist");
     } catch (err) {
       console.log(err);
       toast.error("Delete failed. Try again.", {
