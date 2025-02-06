@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    
+    "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -45,13 +45,9 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
-    "vite": "^6.1.0"
-  },
+   
+     "vite": "^5.0.12"
+  }
   
-  "builds": [
-    {
-      "src": "Client/package.json",
-      "use": "@vercel/node"
-    }
-  ]
+  
 }
