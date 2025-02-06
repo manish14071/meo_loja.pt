@@ -1,23 +1,39 @@
-
 import { apiSlice } from "./apiSlice";
 import { CATEGORY_URL } from "../constants";
 
 export const categoryApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    createCategory: builder.mutation({
-      query: (newCategory) => ({
-        url: `${CATEGORY_URL}`,
-        method: "POST",
-        body: newCategory,
+    getCategories: builder.query({
+      query: () => ({
+        url: CATEGORY_URL,
       }),
+      providesTags: ["Category"],
+      keepUnusedDataFor: 5,
+    }),
+
+    getCategoryById: builder.query({
+      query: (categoryId) => ({
+        url: `${CATEGORY_URL}/${categoryId}`,
+      }),
+      keepUnusedDataFor: 5,
+    }),
+
+    createCategory: builder.mutation({
+      query: (data) => ({
+        url: CATEGORY_URL,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Category"],
     }),
 
     updateCategory: builder.mutation({
-      query: ({ categoryId, updatedCategory }) => ({
+      query: ({ categoryId, name }) => ({
         url: `${CATEGORY_URL}/${categoryId}`,
         method: "PUT",
-        body: updatedCategory,
+        body: { name },
       }),
+      invalidatesTags: ["Category"],
     }),
 
     deleteCategory: builder.mutation({
@@ -25,17 +41,15 @@ export const categoryApiSlice = apiSlice.injectEndpoints({
         url: `${CATEGORY_URL}/${categoryId}`,
         method: "DELETE",
       }),
-    }),
-
-    fetchCategories: builder.query({
-      query: () => `${CATEGORY_URL}/categories`,
+      invalidatesTags: ["Category"],
     }),
   }),
 });
 
 export const {
+  useGetCategoriesQuery,
+  useGetCategoryByIdQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
-  useFetchCategoriesQuery,
 } = categoryApiSlice;

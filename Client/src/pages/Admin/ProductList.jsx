@@ -1,12 +1,309 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useState } from "react"
 import {
   useCreateProductMutation,
   useUploadProductImageMutation,
+  useGetProductsQuery,
+  useDeleteProductMutation,
+  useUpdateProductMutation,
+} from "../../redux/api/productApiSlice"
+import { useGetCategoriesQuery } from "../../redux/api/categoryApiSlice"
+import { toast } from "react-toastify"
+import Loader from "../../components/Loader"
+import { FaEdit, FaTrash, FaPlus } from "react-icons/fa"
+import Modal from "../../components/ui/Modal"
+import ProductCard from "../Products/ProductCard"
+import ImageUpload from "../../components/Products/ImageUpload"
+
+
+const ProductList = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [productData, setProductData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category_id: "",
+    stock_count: "",
+    image: "",
+    brand:"",
+  })
+
+  const { data, isLoading, error, refetch } = useGetProductsQuery({})
+  const { data: categories } = useGetCategoriesQuery()
+  const [createProduct] = useCreateProductMutation()
+  const [updateProduct] = useUpdateProductMutation()
+  const [deleteProduct] = useDeleteProductMutation()
+  const [uploadProductImage] = useUploadProductImageMutation()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      if (isEditMode) {
+        await updateProduct({
+          productId: selectedProduct.id,
+          data: productData,
+        }).unwrap()
+        toast.success("Product updated")
+      } else {
+        await createProduct(productData).unwrap()
+        toast.success("Product created")
+      }
+      setIsModalOpen(false)
+      resetForm()
+      refetch()
+    } catch (error) {
+      toast.error(error?.data?.message || error.error)
+    }
+  }
+
+  const handleEdit = (product) => {
+    setSelectedProduct(product)
+    setProductData({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      category: product.category,
+      category_id: product.category_id,
+      stock_count: product.countInStock,
+      image: product.image,
+      brand:product.brand,
+    })
+    setIsEditMode(true)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      try {
+        await deleteProduct(id).unwrap()
+        toast.success("Product deleted")
+        refetch()
+      } catch (error) {
+        toast.error(error?.data?.message || error.error)
+      }
+    }
+  }
+
+  const resetForm = () => {
+    setProductData({
+      name: "",
+      description: "",
+      price: "",
+      category_id: "",
+      stock_count: "",
+      image: "",
+      brand:"",
+    })
+    setIsEditMode(false)
+    setSelectedProduct(null)
+  }
+
+  const handleCreate = () => {
+    setIsEditMode(false)
+    setIsModalOpen(true)
+    resetForm()
+  }
+  const handleImageUpload = (imageUrl) => {
+    setProductData({ ...productData, image: imageUrl });
+  };
+  if (isLoading) return <Loader />
+  if (error) return <div className="text-center text-red-600">Error: {error?.data?.message || error.error}</div>
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-semibold text-gray-800">Products</h1>
+        <button
+          onClick={handleCreate}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+        >
+          <FaPlus className="mr-2" /> Create Product
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {data?.map((product) => (
+          <div
+            key={product.id}
+            className="bg-white rounded-lg shadow-md overflow-hidden transition duration-300 ease-in-out transform hover:scale-105"
+          >
+            <ProductCard product={product} />
+            <div className="p-4 flex justify-end space-x-2">
+              <button
+                onClick={() => handleEdit(product)}
+                className="text-blue-500 hover:text-blue-700 transition duration-300"
+              >
+                <FaEdit size={20} />
+              </button>
+              <button
+                onClick={() => handleDelete(product.id)}
+                className="text-red-500 hover:text-red-700 transition duration-300"
+              >
+                <FaTrash size={20} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          resetForm()
+        }}
+        title={isEditMode ? "Edit Product" : "Add Product"}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Name
+            </label>
+            <input
+              type="text"
+              value={productData.name}
+              onChange={(e) =>
+                setProductData({ ...productData, name: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              value={productData.description}
+              onChange={(e) =>
+                setProductData({ ...productData, description: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Price
+              </label>
+              <input
+                type="number"
+                value={productData.price}
+                onChange={(e) =>
+                  setProductData({ ...productData, price: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Stock
+              </label>
+              <input
+                type="number"
+                value={productData.stock_count}
+                onChange={(e) =>
+                  setProductData({ ...productData, stock_count: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-black-700">
+              Category
+            </label>
+            <select
+              value={productData.category_id}
+              onChange={(e) =>
+                setProductData({ ...productData, category_id: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select Category</option>
+              {categories?.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Brand
+            </label>
+            <input
+              type="text"
+              value={productData.brand}
+              onChange={(e) =>
+                setProductData({ ...productData, brand: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+<ImageUpload onImageUpload={handleImageUpload}/>
+          
+
+
+        <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false)
+                resetForm()
+              }}
+              className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-50 transition duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
+            >
+              {isEditMode ? "Update" : "Create"}
+            </button>
+          </div>
+
+
+        </form>
+</Modal>
+</div>
+      )
+}
+
+export default ProductList
+
+
+
+/*
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  useCreateProductMutation,
+  useUploadProductImageMutation,
+  useGetProductsQuery,
+  useDeleteProductMutation,
+  useUpdateProductMutation,
 } from "../../redux/api/productApiSlice";
-import { useFetchCategoriesQuery } from "../../redux/api/categoryApiSlice";
+import { useGetCategoriesQuery } from "../../redux/api/categoryApiSlice";
 import { toast } from "react-toastify";
-import AdminMenu from "./AdminMenu";
+import AdminMenu from "../../components/Admin/AdminMenu";
+import Loader from "../../components/Loader";
+import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import Modal from "../../components/ui/Modal";
+import ProductCard from '../Products/ProductCard';
 
 const ProductList = () => {
   const [image, setImage] = useState("");
@@ -22,33 +319,47 @@ const ProductList = () => {
 
   const [uploadProductImage] = useUploadProductImageMutation();
   const [createProduct] = useCreateProductMutation();
-  const { data: categories } = useFetchCategoriesQuery();
+  const [updateProduct] = useUpdateProductMutation();
+  const [deleteProduct] = useDeleteProductMutation();
+  const { data, isLoading, error, refetch } = useGetProductsQuery({});
+  const { data: categories } = useGetCategoriesQuery();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productData, setProductData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: "",
+    stock_count: "",
+    image: "",
+  });
+
+  console.log('Products data:', data);
+
+  const products = data || [];
+  console.log('Products:', products);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const productData = new FormData();
-      productData.append("image", image);
-      productData.append("name", name);
-      productData.append("description", description);
-      productData.append("price", price);
-      productData.append("category", category);
-      productData.append("quantity", quantity);
-      productData.append("brand", brand);
-      productData.append("countInStock", stock);
-
-      const { data } = await createProduct(productData);
-
-      if (data.error) {
-        toast.error("Product create failed. Try Again.");
+      if (isEditMode) {
+        await updateProduct({
+          productId: selectedProduct.id,
+          data: productData,
+        }).unwrap();
+        toast.success("Product updated");
       } else {
-        toast.success(`${data.name} is created`);
-        navigate("/");
+        await createProduct(productData).unwrap();
+        toast.success("Product created");
       }
+      setIsModalOpen(false);
+      resetForm();
+      refetch();
     } catch (error) {
-      console.error(error);
-      toast.error("Product create failed. Try Again.");
+      toast.error(error?.data?.message || error.error);
     }
   };
 
@@ -66,127 +377,231 @@ const ProductList = () => {
     }
   };
 
+  const handleEdit = (product) => {
+    setSelectedProduct(product);
+    setProductData({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      category: product.category,
+      countInStock: product.countInStock,
+      image: product.image,
+    });
+    setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      try {
+        await deleteProduct(id).unwrap();
+        toast.success("Product deleted");
+        refetch();
+      } catch (error) {
+        toast.error(error?.data?.message || error.error);
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setProductData({
+      name: "",
+      description: "",
+      price: "",
+      category: "",
+      countInStock: "",
+      image: "",
+    });
+    setIsEditMode(false);
+    setSelectedProduct(null);
+  };
+
+  const handleCreate = () => {
+    setIsEditMode(false);
+    setIsModalOpen(true);
+    resetForm(); // Ensure form is clean when creating new product
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader />
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Error fetching products:', error);
+    return (
+      <div className="text-center text-red-600">
+        Error: {error?.data?.message || error.error}
+      </div>
+    );
+  }
+
   return (
-    <div className="container xl:mx-[9rem] sm:mx-[0]">
-      <div className="flex flex-col md:flex-row">
-        <AdminMenu />
-        <div className="md:w-3/4 p-3">
-          <div className="h-12">Create Product</div>
-
-          {imageUrl && (
-            <div className="text-center">
-              <img
-                src={imageUrl}
-                alt="product"
-                className="block mx-auto max-h-[200px]"
-              />
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+        <div className="md:col-span-3">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-semibold">Products</h1>
+            <div className="rounded-tr">
+            <button
+              onClick={handleCreate}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center "
+            >
+              <FaPlus className="mr-2" /> Create Product
+            </button>
             </div>
-          )}
-
-          <div className="mb-3">
-            <label className="border text-white px-4 block w-full text-center rounded-lg cursor-pointer font-bold py-11">
-              {image ? image.name : "Upload Image"}
-
-              <input
-                type="file"
-                name="image"
-                accept="image/*"
-                onChange={uploadFileHandler}
-                className={!image ? "hidden" : "text-white"}
-              />
-            </label>
           </div>
 
-          <div className="p-3">
-            <div className="flex flex-wrap">
-              <div className="one">
-                <label htmlFor="name">Name</label> <br />
-                <input
-                  type="text"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="two ml-10 ">
-                <label htmlFor="name block">Price</label> <br />
-                <input
-                  type="number"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap">
-              <div className="one">
-                <label htmlFor="name block">Quantity</label> <br />
-                <input
-                  type="number"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
-              <div className="two ml-10 ">
-                <label htmlFor="name block">Brand</label> <br />
-                <input
-                  type="text"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                />
-              </div>
-            </div>
+          {isLoading ? (
+          <div className="flex justify-center items-center min-h-screen">
+            <Loader />
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-600">
+            Error: {error?.data?.message || error.error}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+        </div>
+      </div>
 
-            <label htmlFor="" className="my-5">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          resetForm();
+        }}
+        title={isEditMode ? "Edit Product" : "Add Product"}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Name
+            </label>
+            <input
+              type="text"
+              value={productData.name}
+              onChange={(e) =>
+                setProductData({ ...productData, name: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
               Description
             </label>
             <textarea
-              type="text"
-              className="p-2 mb-3 bg-[#101011] border rounded-lg w-[95%] text-white"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            ></textarea>
+              value={productData.description}
+              onChange={(e) =>
+                setProductData({ ...productData, description: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
 
-            <div className="flex justify-between">
-              <div>
-                <label htmlFor="name block">Count In Stock</label> <br />
-                <input
-                  type="text"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="">Category</label> <br />
-                <select
-                  placeholder="Choose Category"
-                  className="p-4 mb-3 w-[30rem] border rounded-lg bg-[#101011] text-white"
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  {categories?.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Price
+              </label>
+              <input
+                type="number"
+                value={productData.price}
+                onChange={(e) =>
+                  setProductData({ ...productData, price: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              />
             </div>
 
-            <button
-              onClick={handleSubmit}
-              className="py-4 px-10 mt-5 rounded-lg text-lg font-bold bg-pink-600"
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Stock
+              </label>
+              <input
+                type="number"
+                value={productData.stock_count}
+                onChange={(e) =>
+                  setProductData({ ...productData, stock_count: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Category
+            </label>
+            <select
+              value={productData.category}
+              onChange={(e) =>
+                setProductData({ ...productData, category: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
             >
-              Submit
+              <option value="">Select Category</option>
+              {categories?.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Image URL
+            </label>
+            <input
+              type="text"
+              value={productData.image}
+              onChange={(e) =>
+                setProductData({ ...productData, image: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                resetForm();
+              }}
+              className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              {isEditMode ? "Update" : "Create"}
             </button>
           </div>
-        </div>
-      </div>
+        </form>
+      </Modal>
     </div>
   );
 };
 
-export default ProductList;
+export default ProductList;*/

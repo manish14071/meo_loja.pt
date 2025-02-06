@@ -2,32 +2,32 @@ import express from "express";
 const router = express.Router();
 
 import {
-  createOrder,
-  getAllOrders,
-  getUserOrders,
-  countTotalOrders,
-  calculateTotalSales,
-  calcualteTotalSalesByDate,
-  findOrderById,
-  markOrderAsPaid,
-  markOrderAsDelivered,
+  addOrderItems,
+  getOrderById,
+  updateOrderToPaid,
+  updateOrderToDelivered,
+  getMyOrders,
+  getOrders,
 } from "../controllers/orderController.js";
 
-import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
 
-router
-  .route("/")
-  .post(authenticate, createOrder)
-  .get(authenticate, authorizeAdmin, getAllOrders);
+// Protected routes
+router.route("/")
+  .post(protect, addOrderItems)
+  .get(protect, admin, getOrders);
 
-router.route("/mine").get(authenticate, getUserOrders);
-router.route("/total-orders").get(countTotalOrders);
-router.route("/total-sales").get(calculateTotalSales);
-router.route("/total-sales-by-date").get(calcualteTotalSalesByDate);
-router.route("/:id").get(authenticate, findOrderById);
-router.route("/:id/pay").put(authenticate, markOrderAsPaid);
-router
-  .route("/:id/deliver")
-  .put(authenticate, authorizeAdmin, markOrderAsDelivered);
+router.route("/myorders")
+  .get(protect, getMyOrders);
+
+router.route("/:id")
+  .get(protect, getOrderById);
+
+// Admin routes
+router.route("/:id/pay")
+  .put(protect, updateOrderToPaid);
+
+router.route("/:id/deliver")
+  .put(protect, admin, updateOrderToDelivered);
 
 export default router;

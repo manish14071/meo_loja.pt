@@ -1,33 +1,28 @@
 import express from "express";
 import {
-  createUser,
-  loginUser,
-  logoutCurrentUser,
-  getAllUsers,
-  getCurrentUSerProfile,
-  updateCurrentUserProfile,
-  deleteUserById,
-  getUserById,
-  updateUserById,
+  authUser,
+  registerUser,
+  logoutUser,
+  getUserProfile,
+  updateUserProfile,
+  getUsers,
+  deleteUser,
+  getUserStats,
+  updateUserAdmin
 } from "../controllers/userController.js";
-import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
-const router = express.Router();
-router
-  .route("/")
-  .post(createUser)
-  .get(authenticate, authorizeAdmin, getAllUsers);
-router.post("/auth", loginUser);
-router.post("/logout", logoutCurrentUser);
+import { protect, admin } from "../middleware/authMiddleware.js";
 
-router
-  .route("/profile")
-  .get(authenticate, getCurrentUSerProfile)
-  .put(authenticate, updateCurrentUserProfile);
-//Admin Routes
-router
-  .route("/:id")
-  .delete(authenticate, authorizeAdmin, deleteUserById)
-  .get(authenticate, authorizeAdmin, getUserById)
-  .put(authenticate, authorizeAdmin, updateUserById);
+const router = express.Router();
+
+router.post("/", registerUser);
+router.post("/auth", authUser);
+router.post("/logout", logoutUser);
+router.get("/profile", protect, getUserProfile);
+router.put("/profile", protect, updateUserProfile);
+router.get("/", protect, admin, getUsers);
+router.delete("/:id", protect, admin, deleteUser);
+router.get('/stats', protect, admin, getUserStats);
+// Add this route in userRoutes.js
+router.put("/:id/admin", protect, admin, updateUserAdmin); // Add this line after the other routes
 
 export default router;

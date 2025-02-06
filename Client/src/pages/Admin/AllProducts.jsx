@@ -25,8 +25,8 @@ const AllProducts = () => {
             <div className="flex flex-wrap justify-around items-center">
               {products.map((product) => (
                 <Link
-                  key={product._id}
-                  to={`/admin/product/update/${product._id}`}
+                  key={product.id}
+                  to={`/admin/product/update/${product.id}`}
                   className="block mb-4 overflow-hidden"
                 >
                   <div className="flex">

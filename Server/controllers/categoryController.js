@@ -1,83 +1,74 @@
-import Category from "../models/categoryModel.js";
-import asyncHandler from "../middlewares/asyncHandler.js";
+import asyncHandler from 'express-async-handler';
+import { pool } from '../config/db.js';
 
+// @desc    Get all categories
+// @route   GET /api/categories
+// @access  Public
+const getCategories = asyncHandler(async (req, res) => {
+  const query = 'SELECT * FROM categories ORDER BY name';
+  const { rows } = await pool.query(query);
+  res.json(rows);
+});
+
+// @desc    Create a category
+// @route   POST /api/categories
+// @access  Private/Admin
 const createCategory = asyncHandler(async (req, res) => {
-  try {
-    const { name } = req.body;
+  const { name } = req.body;
 
-    if (!name) {
-      return res.json({ error: "Name is required" });
-    }
-
-    const existingCategory = await Category.findOne({ name });
-
-    if (existingCategory) {
-      return res.json({ error: "Already exists" });
-    }
-
-    const category = await new Category({ name }).save();
-    res.json(category);
-  } catch (error) {
-    console.log(error);
-    return res.status(400).json(error);
+  if (!name) {
+    res.status(400);
+    throw new Error('Please provide a category name');
   }
+
+  const query = 'INSERT INTO categories (name) VALUES ($1) RETURNING *';
+  const { rows } = await pool.query(query, [name]);
+  res.status(201).json(rows[0]);
 });
 
+// @desc    Update a category
+// @route   PUT /api/categories/:id
+// @access  Private/Admin
 const updateCategory = asyncHandler(async (req, res) => {
-  try {
-    const { name } = req.body;
-    const { categoryId } = req.params;
+  const { name } = req.body;
+  const { id } = req.params;
 
-    const category = await Category.findOne({ _id: categoryId });
+  const query = 'UPDATE categories SET name = $1 WHERE id = $2 RETURNING *';
+  const { rows } = await pool.query(query, [name, id]);
 
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-
-    category.name = name;
-
-    const updatedCategory = await category.save();
-    res.json(updatedCategory);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+  if (rows.length === 0) {
+    res.status(404);
+    throw new Error('Category not found');
   }
+
+  res.json(rows[0]);
 });
 
-const removeCategory = asyncHandler(async (req, res) => {
-  try {
-    const removed = await Category.findByIdAndDelete(req.params.categoryId);
-    res.json(removed);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+// @desc    Delete a category
+// @route   DELETE /api/categories/:id
+// @access  Private/Admin
+const deleteCategory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Check if there are products referencing the category
+  const productQuery = 'SELECT * FROM products WHERE category_id = $1';
+  const { rows: products } = await pool.query(productQuery, [id]);
+
+  if (products.length > 0) {
+    res.status(400);
+    throw new Error('Cannot delete category with associated products');
   }
+
+  // Delete the category
+  const query = 'DELETE FROM categories WHERE id = $1 RETURNING *';
+  const { rows } = await pool.query(query, [id]);
+
+  if (rows.length === 0) {
+    res.status(404);
+    throw new Error('Category not found');
+  }
+
+  res.json({ message: 'Category removed' });
 });
 
-const listCategory = asyncHandler(async (req, res) => {
-  try {
-    const all = await Category.find({});
-    res.json(all);
-  } catch (error) {
-    console.log(error);
-    return res.status(400).json(error.message);
-  }
-});
-
-const readCategory = asyncHandler(async (req, res) => {
-  try {
-    const category = await Category.findOne({ _id: req.params.id });
-    res.json(category);
-  } catch (error) {
-    console.log(error);
-    return res.status(400).json(error.message);
-  }
-});
-
-export {
-  createCategory,
-  updateCategory,
-  removeCategory,
-  listCategory,
-  readCategory,
-};
+export { getCategories, createCategory, updateCategory, deleteCategory };

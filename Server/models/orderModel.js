@@ -1,89 +1,120 @@
-import mongoose from "mongoose";
+import { pool } from '../Config/db.js';
 
-const orderSchema = mongoose.Schema(
-  {
-    user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
-    orderItems: [
-      {
-        name: { type: String, required: true },
-        qty: { type: Number, required: true },
-        image: { type: String, required: true },
-        price: { type: Number, required: true },
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-          ref: "Product",
-        },
-      },
-    ],
+export const orderQueries = {
+  createOrder: async (orderData) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const { user_id, total_amount, shipping_address, payment_method, order_items } = orderData;
 
-    shippingAddress: {
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      postalCode: { type: String, required: true },
-      country: { type: String, required: true },
-    },
+      const orderQuery = `
+        INSERT INTO orders (user_id, total_amount, shipping_address, payment_method)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `;
+      const orderResult = await client.query(orderQuery, [user_id, total_amount, shipping_address, payment_method]);
+      const order = orderResult.rows[0];
 
-    paymentMethod: {
-      type: String,
-      required: true,
-    },
+      for (const item of order_items) {
+        await client.query(`
+          INSERT INTO order_items (order_id, product_id, quantity, price)
+          VALUES ($1, $2, $3, $4)
+        `, [order.id, item.product_id, item.quantity, item.price]);
+      }
 
-    paymentResult: {
-      id: { type: String },
-      status: { type: String },
-      update_time: { type: String },
-      email_address: { type: String },
-    },
-
-    itemsPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-
-    taxPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-
-    shippingPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-
-    totalPrice: {
-      type: Number,
-      required: true,
-      default: 0.0,
-    },
-
-    isPaid: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-
-    paidAt: {
-      type: Date,
-    },
-
-    isDelivered: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-
-    deliveredAt: {
-      type: Date,
-    },
+      await client.query('COMMIT');
+      return order;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   },
-  {
-    timestamps: true,
-  }
-);
 
-const Order = mongoose.model("Order", orderSchema);
-export default Order;
+  getOrderById: async (id) => {
+    const query = `
+      SELECT o.*, 
+             json_agg(json_build_object(
+               'id', oi.id,
+               'product_id', oi.product_id,
+               'quantity', oi.quantity,
+               'price', oi.price,
+               'product_name', p.name
+             )) as items
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE o.id = $1
+      GROUP BY o.id
+    `;
+    const result = await pool.query(query, [id]);
+    return result.rows[0];
+  },
+
+  getUserOrders: async (userId) => {
+    const query = `
+      SELECT o.*, 
+             json_agg(json_build_object(
+               'id', oi.id,
+               'product_id', oi.product_id,
+               'quantity', oi.quantity,
+               'price', oi.price,
+               'product_name', p.name
+             )) as items
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE o.user_id = $1
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows;
+  },
+
+  getAllOrders: async () => {
+    const query = `
+      SELECT o.*, 
+             u.name as user_name,
+             json_agg(json_build_object(
+               'id', oi.id,
+               'product_id', oi.product_id,
+               'quantity', oi.quantity,
+               'price', oi.price,
+               'product_name', p.name
+             )) as items
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      GROUP BY o.id, u.name
+      ORDER BY o.created_at DESC
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  },
+
+  updateOrderStatus: async (id, status) => {
+    const query = `
+      UPDATE orders 
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `;
+    const result = await pool.query(query, [status, id]);
+    return result.rows[0];
+  },
+
+  updatePaymentStatus: async (id, paymentStatus) => {
+    const query = `
+      UPDATE orders 
+      SET payment_status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `;
+    const result = await pool.query(query, [paymentStatus, id]);
+    return result.rows[0];
+  }
+};

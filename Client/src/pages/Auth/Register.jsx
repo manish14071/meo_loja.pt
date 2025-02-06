@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import Loader from "../../components/Loader";
 import { useRegisterMutation } from "../../redux/api/usersApiSlice";
 import { setCredentials } from "../../redux/features/auth/authSlice";
 import { toast } from "react-toastify";
+import Loader from "../../components/Loader";
 
 const Register = () => {
-  const [username, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -16,7 +16,6 @@ const Register = () => {
   const navigate = useNavigate();
 
   const [register, { isLoading }] = useRegisterMutation();
-
   const { userInfo } = useSelector((state) => state.auth);
 
   const { search } = useLocation();
@@ -34,122 +33,107 @@ const Register = () => {
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
-    } else {
-      try {
-        const res = await register({ username, email, password }).unwrap();
-        dispatch(setCredentials({ ...res }));
-        navigate(redirect);
-        toast.success("User successfully registered");
-      } catch (err) {
-        console.log(err);
-        toast.error(err.data.message);
-      }
+      return;
+    }
+
+    try {
+      console.log('Sending registration data:', { username, email, password });
+      const res = await register({ 
+        username, 
+        email, 
+        password 
+      }).unwrap();
+      console.log('Registration response:', res);
+      
+      dispatch(setCredentials({ ...res }));
+      navigate(redirect);
+      toast.success("Registration successful!");
+    } catch (err) {
+      console.error('Registration error:', err);
+      toast.error(err?.data?.message || err.error || 'Registration failed');
     }
   };
 
   return (
-    <section className="pl-[10rem] flex flex-wrap">
-      <div className="mr-[4rem] mt-[5rem]">
-        <h1 className="text-2xl font-semibold mb-4">Register</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-96">
+        <h1 className="text-2xl font-bold mb-6 text-center">Register</h1>
 
-        <form onSubmit={submitHandler} className="container w-[40rem]">
-          <div className="my-[2rem]">
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-white"
-            >
-              Name
+        <form onSubmit={submitHandler}>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Username
             </label>
             <input
               type="text"
-              id="name"
-              className="mt-1 p-2 border rounded w-full"
-              placeholder="Enter name"
+              placeholder="Enter username"
               value={username}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
             />
           </div>
 
-          <div className="my-[2rem]">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-white"
-            >
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
               Email Address
             </label>
             <input
               type="email"
-              id="email"
-              className="mt-1 p-2 border rounded w-full"
               placeholder="Enter email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
             />
           </div>
 
-          <div className="my-[2rem]">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-white"
-            >
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
               Password
             </label>
             <input
               type="password"
-              id="password"
-              className="mt-1 p-2 border rounded w-full"
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
             />
           </div>
 
-          <div className="my-[2rem]">
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-white"
-            >
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
               Confirm Password
             </label>
             <input
               type="password"
-              id="confirmPassword"
-              className="mt-1 p-2 border rounded w-full"
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <button
             disabled={isLoading}
             type="submit"
-            className="bg-pink-500 text-white px-4 py-2 rounded cursor-pointer my-[1rem]"
+            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 focus:outline-none"
           >
-            {isLoading ? "Registering..." : "Register"}
+            {isLoading ? <Loader /> : "Register"}
           </button>
-
-          {isLoading && <Loader />}
         </form>
 
-        <div className="mt-4">
-          <p className="text-white">
+        <div className="mt-4 text-center">
+          <p className="text-gray-600">
             Already have an account?{" "}
             <Link
               to={redirect ? `/login?redirect=${redirect}` : "/login"}
-              className="text-pink-500 hover:underline"
+              className="text-blue-500 hover:text-blue-600"
             >
               Login
             </Link>
           </p>
         </div>
       </div>
-      <img
-        src="https://images.unsplash.com/photo-1576502200916-3808e07386a5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2065&q=80"
-        alt=""
-        className="h-[65rem] w-[59%] xl:block md:hidden sm:hidden rounded-lg"
-      />
-    </section>
+    </div>
   );
 };
 

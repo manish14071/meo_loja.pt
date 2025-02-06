@@ -1,179 +1,215 @@
-import User from "../models/userModel.js";
-import asyncHandler from "../middlewares/asyncHandler.js";
-import bcrypt from "bcryptjs";
-import generateToken from "../utils/token.js";
+import { userQueries } from '../models/userModel.js';
+import generateToken from '../utils/generateToken.js';
+import bcrypt from 'bcryptjs';
+import { pool } from '../config/db.js';
+import asyncHandler from 'express-async-handler';
 
-const createUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
-  if (!username || !email || !password) {
-    console.log("please fill details");
-  }
-  const userExists = await User.findOne({ email });
-  if (userExists) res.status(400).send("user already exists");
-
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const newUser = new User({ username, email, password: hashedPassword });
-
+// Auth user & get token
+export const authUser = async (req, res) => {
   try {
-    await newUser.save();
-    generateToken(res, newUser._id);
-    res.status(201).json({
-      _id: newUser._id,
-      username: newUser.username,
-      email: newUser.email,
-      isAdmin: newUser.isAdmin,
-    });
-  } catch (error) {
-    console.log(error);
-  }
-});
+    const { email, password } = req.body;
+    const user = await userQueries.getUserByEmail(email);
 
-const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      existingUser.password
-    );
-    if (isPasswordValid) {
-      generateToken(res, existingUser._id);
-      res.status(201).json({
-        _id: existingUser._id,
-        username: existingUser.username,
-        email: existingUser.email,
-        isAdmin: existingUser.isAdmin,
+    if (user && (await bcrypt.compare(password, user.password))) {
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isadmin: user.isadmin,
+        token: generateToken(user.id),
       });
-      return; // exit fn after res
+    } else {
+      res.status(401).json({ message: 'Invalid email or password' });
     }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-});
+};
 
-const logoutCurrentUser = asyncHandler(async (req, res) => {
-  res.cookie("jwt", "", {
-    httpOnly: true,
-    expires: new Date(0),
-  });
-  res.status(200).json({ message: "Logged Out" });
-});
+// Register new user
+export const registerUser = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const userExists = await userQueries.getUserByEmail(email);
 
-const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({});
-  res.json(users);
-});
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-const getCurrentUSerProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-
-  if (user) {
-    res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
+    const user = await userQueries.createUser({
+      username,
+      email,
+      password,
+      isadmin: false,
+   
     });
-  } else {
-    res.status(404);
-    throw new Error("user not found");
+
+    if (user) {
+      try {
+        const token = generateToken(user.id);
+        res.status(201).json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isadmin: user.isadmin,
+          token,
+        });
+      } catch (tokenError) {
+        console.error('Token generation error:', tokenError);
+        res.status(500).json({ message: 'Error generating authentication token' });
+      }
+    } else {
+      res.status(400).json({ message: 'Invalid user data' });
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get user profile
+export const getUserProfile = async (req, res) => {
+  try {
+    const user = await userQueries.getUserById(req.user.id);
+    if (user) {
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isadmin: user.isadmin,
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (req, res) => {
+  try {
+    const user = await userQueries.updateUser(req.user.id, req.body);
+    if (user) {
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isadmin: user.isadmin,
+        token: generateToken(user.id),
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get user stats
+// @route   GET /api/users/stats
+// @access  Private/Admin
+export const getUserStats = asyncHandler(async (req, res) => {
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_users,
+        COALESCE(COUNT(CASE WHEN isadmin = true THEN 1 END), 0) as admin_count,
+        COALESCE(COUNT(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 END), 0) as new_users_last_week,
+        COALESCE(COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END), 0) as new_users_last_month,
+        MIN(created_at) as first_user_date,
+        MAX(created_at) as latest_user_date
+      FROM users
+    `;
+
+    const { rows } = await pool.query(statsQuery);
+    
+    if (!rows[0]) {
+      return res.status(404).json({ message: 'No user statistics found' });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ message: 'Error fetching user statistics' });
   }
 });
 
-const updateCurrentUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (user) {
-    user.username = req.body.username || user.username;
-    user.email = req.body.email || user.email;
-    if (req.body.password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(req.body.password, salt);
-      user.password = hashedPassword;
-    }
-    const updatedUser = await user.save();
+// Update the getUsers function to include more details
+export const getUsers = asyncHandler(async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.isadmin,
+        u.created_at,
+        COALESCE(
+          (
+            SELECT COUNT(*) 
+            FROM orders 
+            WHERE user_id = u.id
+          ), 0
+        ) as order_count
+      FROM users u
+      ORDER BY u.created_at DESC
+    `;
+    
+    const { rows } = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
 
-    res.json({
-      _id: updatedUser._id,
-      username: updatedUser.username,
-      email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
+// Delete user (admin only)
+export const deleteUser = async (req, res) => {
+  try {
+    const user = await userQueries.deleteUser(req.params.id);
+    if (user) {
+      res.json({ message: 'User removed' });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Logout user / clear cookie
+export const logoutUser = async (req, res) => {
+  try {
+    res.cookie('jwt', '', {
+      httpOnly: true,
+      expires: new Date(0),
     });
-  } else {
-    res.status(404);
-    throw new Error("user not found");
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-});
+};
 
-const deleteUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+export const updateUserAdmin = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { isadmin } = req.body;
+    
+    const user = await userQueries.updateUserAdmin(userId, isadmin);
 
-  if (user) {
-    if (user.isAdmin) {
-      res.status(400);
-      throw new Error("cannot delete admin user");
+    if (user) {
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isadmin: user.isadmin
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
     }
-    await user.deleteOne({ _id: user._id });
-    res.json({ message: "user deleted" });
-  } else {
-    res.status(404);
-    throw new Error("User not found");
+  } catch (error) {
+    console.error('Update admin status error:', error);
+    res.status(500).json({ message: error.message });
   }
-});
-
-const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select("-password");
-
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(404);
-    throw new Error("user not found");
-  }
-});
-
-
-
-const updateUserById=asyncHandler(async(req,res)=>{
-
-const user=await User.findById(req.params.id)
-
-if(user){
-    user.username=req.body.username || user.username
-    user.email=req.body.email || user.email
-    user.isAdmin=Boolean(req.body.isAdmin)
-
-    const updatedUser=await user.save()
-
-    res.json({
-
-
-_id:updatedUser._id,
-username:updatedUser.username,
-email:updatedUser.email,
-isAdmin:updatedUser.isAdmin
-
-
-
-    })
-}else{
-    res.status(404)
-    throw new Error("user not found")
-}
-
-
-
-
-})
-
-export {
-  createUser,
-  loginUser,
-  logoutCurrentUser,
-  getAllUsers,
-  getCurrentUSerProfile,
-  updateCurrentUserProfile,
-  deleteUserById,
-  getUserById,updateUserById
-  
 };

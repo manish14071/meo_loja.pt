@@ -4,10 +4,24 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server:{
-    proxy:{
-      "/api/":"http://localhost:3267",
-      "/uploads/":"http://localhost:3267",
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3267',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      },
+      '/uploads': {
+        target: 'http://localhost:3267',
+        changeOrigin: true,
+        secure: false
+      }
     },
+    port: 5173
+  },
+  optimizeDeps: {
+    include: ['clsx', 'tailwind-merge'],
   },
 });

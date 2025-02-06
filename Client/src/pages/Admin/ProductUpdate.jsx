@@ -7,7 +7,7 @@ import {
   useGetProductByIdQuery,
   useUploadProductImageMutation,
 } from "../../redux/api/productApiSlice";
-import { useFetchCategoriesQuery } from "../../redux/api/categoryApiSlice";
+import { useGetCategoriesQuery } from "../../redux/api/categoryApiSlice";
 import { toast } from "react-toastify";
 
 const AdminProductUpdate = () => {
@@ -32,7 +32,7 @@ const AdminProductUpdate = () => {
   const navigate = useNavigate();
 
   // Fetch categories using RTK Query
-  const { data: categories = [] } = useFetchCategoriesQuery();
+  const { data: categories = [] } = useGetCategoriesQuery();
 
   const [uploadProductImage] = useUploadProductImageMutation();
 

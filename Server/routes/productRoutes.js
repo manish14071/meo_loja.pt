@@ -1,40 +1,49 @@
 import express from "express";
-import formidable from "express-formidable";
-const router = express.Router();
-
-// controllers
 import {
-  addProduct,
-  updateProductDetails,
-  removeProduct,
   fetchProducts,
   fetchProductById,
   fetchAllProducts,
-  addProductReview,
   fetchTopProducts,
   fetchNewProducts,
-  filterProducts,
+  getProductsByCategory,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+ 
+  getProductStats,
+  getFilteredProducts,
 } from "../controllers/productController.js";
-import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
-import checkId from "../middlewares/checkId.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js";
+import {
+  createProductReview,
+  getProductReviews,
+} from "../controllers/reviewController.js";
 
-router
-  .route("/")
-  .get(fetchProducts)
-  .post(authenticate, authorizeAdmin, formidable(), addProduct);
+const router = express.Router();
 
-router.route("/allproducts").get(fetchAllProducts);
-router.route("/:id/reviews").post(authenticate, checkId, addProductReview);
-
+// Public routes
+router.get("/", fetchProducts);
+router.get("/all", fetchAllProducts);
 router.get("/top", fetchTopProducts);
 router.get("/new", fetchNewProducts);
+router.get("/:id", fetchProductById);
+router.get("/category/:categoryId", getProductsByCategory);
+
+// Protected routes (admin only)
+router.post("/", protect, admin, upload.single("image"), createProduct);
+router.put("/:id", protect, admin, upload.single("image"), updateProduct);
+router.delete("/:id", protect, admin, deleteProduct);
+
+// Filtering routes
+router.post("/filtered-products", getFilteredProducts);
+
+// Stats route
+router.get("/stats", protect, admin, getProductStats);
 
 router
-  .route("/:id")
-  .get(fetchProductById)
-  .put(authenticate, authorizeAdmin, formidable(), updateProductDetails)
-  .delete(authenticate, authorizeAdmin, removeProduct);
-
-router.route("/filtered-products").post(filterProducts);
+  .route("/:id/reviews")
+  .get(getProductReviews)
+  .post(protect, createProductReview);
 
 export default router;

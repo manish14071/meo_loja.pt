@@ -30,21 +30,19 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({ storage, fileFilter });
-const uploadSingleImage = upload.single("image");
 
-router.post("/", (req, res) => {
-  uploadSingleImage(req, res, (err) => {
-    if (err) {
-      res.status(400).send({ message: err.message });
-    } else if (req.file) {
-      res.status(200).send({
-        message: "Image uploaded successfully",
-        image: `/${req.file.path}`,
-      });
-    } else {
-      res.status(400).send({ message: "No image file provided" });
-    }
-  });
+router.post("/", upload.single("image"), (req, res) => {
+  console.log('Request body:', req.body);
+  console.log('Uploaded file:', req.file);
+  
+  if (req.file) {
+    res.status(200).send({
+      message: "Image uploaded successfully",
+      image: `/${req.file.path}`,
+    });
+  } else {
+    res.status(400).send({ message: "No image file provided" });
+  }
 });
 
 export default router;

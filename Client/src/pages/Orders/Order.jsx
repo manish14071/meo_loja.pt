@@ -211,7 +211,7 @@ const Order = () => {
         )}
 
         {loadingDeliver && <Loader />}
-        {userInfo && userInfo.isAdmin && order.isPaid && !order.isDelivered && (
+        {userInfo && userInfo.isadmin && order.isPaid && !order.isDelivered && (
           <div>
             <button
               type="button"
