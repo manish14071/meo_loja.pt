@@ -4,7 +4,7 @@ import { useGetProductsQuery } from "../../redux/api/productApiSlice"
 import { useGetOrdersQuery } from "../../redux/api/orderApiSlice"
 import { FaUsers, FaClipboardList, FaShoppingCart, FaUserShield } from "react-icons/fa"
 import Loader from "../../components/Loader"
-import { formatDate } from "../../utils/formatDate"
+import formatDate from "../../Utils/formatDate"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 const AdminDashboard = () => {
