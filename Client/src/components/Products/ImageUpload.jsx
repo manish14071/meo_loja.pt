@@ -1,3 +1,4 @@
+// Client/src/components/Products/ImageUpload.jsx
 import { useState } from 'react';
 import { useUploadProductImageMutation } from '../../redux/api/productApiSlice';
 import { toast } from 'react-toastify';
@@ -16,12 +17,7 @@ const ImageUpload = ({ onImageUpload, currentImage }) => {
 
     const formData = new FormData();
     formData.append('image', file);
-    
-    // Log the FormData entries
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
-  
+
     try {
       console.log('Sending request to upload image');
       const response = await uploadProductImage(formData).unwrap();
@@ -34,7 +30,7 @@ const ImageUpload = ({ onImageUpload, currentImage }) => {
       toast.error(err?.data?.message || 'Error uploading image');
     }
   };
-   
+
   return (
     <div>
       <input type="file" name="image" onChange={handleFileChange} accept="image/*" />

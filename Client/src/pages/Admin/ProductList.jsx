@@ -253,7 +253,7 @@ const ProductList = () => {
               required
             />
           </div>
-<ImageUpload onImageUpload={handleImageUpload}/>
+          <ImageUpload onImageUpload={handleImageUpload} currentImage={productData.image} />
           
 
 
