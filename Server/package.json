@@ -5,6 +5,7 @@
   "description": "E-commerce API with PostgreSQL",
   "main": "index.js",
   "scripts": {
+    "build": "npm build",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "watch": "nodemon --watch './**/*.js' index.js"
