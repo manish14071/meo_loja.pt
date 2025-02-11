@@ -1,7 +1,7 @@
 import { pool } from "../config/db.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { productQueries } from '../models/productModel.js';
-import { uploadToCloudinary } from "../Config/cloudinaryConfig.js";
+import { uploadToCloudinary } from "../config/cloudinaryConfig.js";
 
 
 

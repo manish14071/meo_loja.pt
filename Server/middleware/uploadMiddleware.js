@@ -1,7 +1,7 @@
 import multer from "multer";
 import fs from 'fs';
 import path from 'path';
-import { uploadToCloudinary } from "../Config/cloudinaryConfig.js";
+import { uploadToCloudinary } from "../config/cloudinaryConfig.js";
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads', 'temp');

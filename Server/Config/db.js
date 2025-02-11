@@ -18,7 +18,7 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
-export const connectDB = async () => {
+ const connectDB = async () => {
   try {
     const client = await pool.connect();
     console.log('PostgreSQL connected');
@@ -28,3 +28,6 @@ export const connectDB = async () => {
     process.exit(1);
   }
 };
+
+
+export default connectDB;
