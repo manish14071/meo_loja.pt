@@ -7,14 +7,16 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3267',
+        target: process.env.VITE_API_URL || 'http://localhost:3267',
         changeOrigin: true,
-        secure: false,
+        secure: true,
         ws: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       '/uploads': {
-        target: 'http://localhost:3267',
+        target: process.env.VITE_API_URL || 'http://localhost:3267',
+        changeOrigin: true,
+        secure: true,
       }
     }
   }

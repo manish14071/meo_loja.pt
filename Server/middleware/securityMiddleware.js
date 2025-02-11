@@ -24,7 +24,10 @@ export const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
       'http://localhost:5173',
-      'http://localhost:3267'
+      'http://localhost:3267',
+      "https://peppy-rolypoly-0bcae4.netlify.app/",
+     
+
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
