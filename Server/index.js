@@ -13,9 +13,7 @@ import {
   corsOptions,
 } from "./middleware/securityMiddleware.js";
 
-
-
-import connectDB from "./config/db.js";
+import { connectDB } from "./config/db.js";
 import { initializeTables } from "./schemas/schemas/init.js";
 
 // Routes

@@ -5,12 +5,9 @@ dotenv.config();
 
 const { Pool } = pg;
 
-export const pool = new Pool({
-  user: process.env.PGUSER,
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  password: process.env.PGPASSWORD,
-  port: process.env.PGPORT,
+// Create a pool instance
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
 });
 
 // Add this for debugging database connection
@@ -18,7 +15,7 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
- const connectDB = async () => {
+const connectDB = async () => {
   try {
     const client = await pool.connect();
     console.log('PostgreSQL connected');
@@ -29,5 +26,5 @@ pool.on('error', (err) => {
   }
 };
 
-
-export default connectDB;
+// Export the pool instance and connectDB function
+export { pool, connectDB };
