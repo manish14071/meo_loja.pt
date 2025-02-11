@@ -8,6 +8,7 @@ const { Pool } = pg;
 // Create a pool instance
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 // Add this for debugging database connection
