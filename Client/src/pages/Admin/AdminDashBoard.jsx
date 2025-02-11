@@ -3,9 +3,10 @@ import { useGetUsersQuery, useGetUserStatsQuery } from "../../redux/api/usersApi
 import { useGetProductsQuery } from "../../redux/api/productApiSlice"
 import { useGetOrdersQuery } from "../../redux/api/orderApiSlice"
 import { FaUsers, FaClipboardList, FaShoppingCart, FaUserShield } from "react-icons/fa"
-import Loader from "../../components/Loader"
-import formatDate from "../../utils/formatDate"
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { formatDate } from "../../utils/formatDate"
+
 
 const AdminDashboard = () => {
   const { data: users, isLoading: loadingUsers, error: usersError } = useGetUsersQuery()
