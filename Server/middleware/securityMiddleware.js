@@ -40,3 +40,5 @@ export const corsOptions = {
   exposedHeaders: ['Set-Cookie'],
   optionsSuccessStatus: 200
 };
+
+

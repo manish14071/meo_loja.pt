@@ -29,6 +29,8 @@ if (!fs.existsSync(uploadsTemp)) {
 }
 
 const app = express();
+app.set("trust proxy", 1);
+
 const port = process.env.PORT || 3267;
 
 // Middleware
@@ -42,16 +44,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
 
 // Add production middleware
-if (process.env.NODE_ENV === 'production') {
-  // Security headers for production
-  app.use((req, res, next) => {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    next();
-  });
-}
+
 
 // Handle file uploads separately
 app.use((req, res, next) => {
@@ -62,70 +55,16 @@ app.use((req, res, next) => {
   }
 });
 
-app.use((req, res, next) => {
-  if (!req.originalUrl.startsWith("/api/upload")) {
-    express.urlencoded({ extended: true, limit: "50mb" })(req, res, next);
-  } else {
-    next();
-  }
-});
+
 
 // Static files
 const __dirname = path.resolve();
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    environment: process.env.NODE_ENV,
-    time: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
 
 // API documentation - move this before error handlers
-app.get('/api-docs', (req, res) => {
-  res.json({
-    name: "Meo-Loja API",
-    version: "1.0.0",
-    baseUrl: process.env.NODE_ENV === 'production' 
-      ? 'https://meo-loja-pt.onrender.com/api'
-      : 'http://localhost:3267/api',
-    endpoints: {
-      auth: {
-        login: "POST /api/users/auth",
-        register: "POST /api/users",
-        logout: "POST /api/users/logout",
-        profile: "GET /api/users/profile"
-      },
-      products: {
-        list: "GET /api/products",
-        single: "GET /api/products/:id",
-        create: "POST /api/products",
-        update: "PUT /api/products/:id",
-        delete: "DELETE /api/products/:id"
-      },
-      categories: {
-        list: "GET /api/category",
-        create: "POST /api/category",
-        update: "PUT /api/category/:id",
-        delete: "DELETE /api/category/:id"
-      },
-      orders: {
-        list: "GET /api/orders",
-        create: "POST /api/orders",
-        getById: "GET /api/orders/:id",
-        updateToPaid: "PUT /api/orders/:id/pay"
-      },
-      upload: {
-        image: "POST /api/upload"
-      }
-    },
-    serverTime: new Date().toISOString(),
-    environment: process.env.NODE_ENV
-  });
-});
+
 
 // API Routes
 app.use("/api/users", userRoutes);
@@ -135,13 +74,6 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/orders", orderRoutes);
 
 // Root route for API
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Meo-Loja API is running',
-    documentation: '/api-docs',
-    health: '/health'
-  });
-});
 
 console.log("Cloudinary Config:", {
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -150,23 +82,9 @@ console.log("Cloudinary Config:", {
 });
 
 // Error handling
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
-  });
-});
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    status: 'error',
-    message: 'Route not found',
-    path: req.originalUrl
-  });
-});
+
 
 // Initialize database and start server
 connectDB().then(async () => {
