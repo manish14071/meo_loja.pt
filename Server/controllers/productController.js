@@ -1,8 +1,9 @@
 import { pool } from "../config/db.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { productQueries } from '../models/productModel.js';
+import { uploadToCloudinary } from "../Config/cloudinaryConfig.js";
 
-// Create Product
+
 
 
 // Update Product
@@ -151,38 +152,79 @@ const getProductById = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = asyncHandler(async (req, res) => {
+  console.log('Request body:', req.body); // Log the request body
+  console.log('Uploaded file:', req.file); // Log the uploaded file
+
   const {
     name,
-    price,
     description,
-    image,
-    brand,
+    price,
     category_id,
     stock_count,
+    brand
   } = req.body;
 
-  const query = `
-    INSERT INTO products (
-      name, price, description, image, brand, 
-      category_id, stock_count, user_id
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    RETURNING *
-  `;
+  // Server-side validation
+  const validationErrors = [];
+  
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    validationErrors.push('Product name is required');
+  }
+  
+  if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+    validationErrors.push('Valid price is required');
+  }
+  
+  if (!category_id || isNaN(Number(category_id))) {
+    validationErrors.push('Valid category is required');
+  }
 
-  const values = [
-    name,
-    price,
-    description,
-    image,
-    brand,
-    category_id,
-    stock_count,
-    req.user.id,
-  ];
+  if (validationErrors.length > 0) {
+    res.status(400);
+    throw new Error(validationErrors.join(', '));
+  }
 
-  const { rows } = await pool.query(query, values);
-  res.status(201).json(rows[0]);
+  try {
+    let imageUrl = '';
+    if (req.file) {
+      // Upload the image to Cloudinary
+      imageUrl = await uploadToCloudinary(req.file.path);
+    }
+
+    const query = `
+      INSERT INTO products (
+        name,
+        description,
+        price,
+        category_id,
+        stock_count,
+        image,
+        brand,
+        user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `;
+
+    const values = [
+      name.trim(),
+      description?.trim() || '',
+      Number(price),
+      Number(category_id),
+      Number(stock_count) || 0,
+      imageUrl, // Use the Cloudinary URL
+      brand?.trim() || '',
+      req.user.id
+    ];
+
+    console.log('Creating product:', values);
+    const { rows } = await pool.query(query, values);
+
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(400);
+    throw new Error(error.message);
+  }
 });
 
 // @desc    Update a product

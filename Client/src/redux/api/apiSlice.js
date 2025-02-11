@@ -9,13 +9,26 @@ const baseQuery = fetchBaseQuery({
         if (token) {
             headers.set('Authorization', `Bearer ${token}`);
         }
-        headers.set('Content-Type', 'application/json');
+        // Don't set Content-Type for FormData
+        if (!headers.get('Content-Type') && !headers.get('formData')) {
+            headers.set('Content-Type', 'application/json');
+        }
         return headers;
     },
 })
 
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+    let result = await baseQuery(args, api, extraOptions);
+    if (result.error && result.error.status === 401) {
+        // Handle unauthorized error
+        localStorage.removeItem("token");
+        window.location.href = '/login';
+    }
+    return result;
+};
+
 export const apiSlice = createApi({
-    baseQuery,
+    baseQuery: baseQueryWithReauth,
     tagTypes: ["Product", "Order", "User", "Category"],
     endpoints: (builder) => ({})
 })

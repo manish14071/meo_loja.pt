@@ -1,124 +1,122 @@
-import dotenv from "dotenv"
-dotenv.config()
+import dotenv from "dotenv";
+dotenv.config();
 
-import path from "path"
-import express from "express"
-import cors from 'cors'
-import cookieParser from 'cookie-parser'
-import fs from 'fs'
-//import { fileURLToPath } from 'url'
-import { dirname } from 'path'
-import { limiter, securityHeaders, xssProtection, corsOptions } from './middleware/securityMiddleware.js'
-import { errorHandler, notFound } from './middleware/errorMiddleware.js'
-import multer from "multer"
+import path from "path";
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import fs from "fs";
+import {
+  limiter,
+  securityHeaders,
+  xssProtection,
+  corsOptions,
+} from "./middleware/securityMiddleware.js";
+import { connectDB } from "./config/db.js";
+import { initializeTables } from "./db/schemas/init.js";
 
-//utils
+// Routes
+import userRoutes from "./routes/userRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
-import { connectDB } from "./config/db.js"
-import userRoutes from "./routes/userRoutes.js"
-import categoryRoutes from "./routes/categoryRoutes.js"
-import productRoutes from "./routes/productRoutes.js"
-import uploadRoutes from "./routes/uploadRoutes.js"
-import orderRoutes from "./routes/orderRoutes.js"
-import { initializeTables } from './db/schemas/init.js'
-//import fileUpload from "express-fileupload"
+// Create uploads temp directory
+const uploadsTemp = "./uploads/temp";
+if (!fs.existsSync(uploadsTemp)) {
+  fs.mkdirSync(uploadsTemp, { recursive: true });
+}
 
+const app = express();
+const port = process.env.PORT || 3267;
 
+// Middleware
 
-const port=process.env.PORT || 3267;
-
-connectDB().then(async () => {
-  try {
-    await initializeTables();
-    console.log('Database tables initialized');
-  } catch (error) {
-    console.error('Error initializing tables:', error);
-  }
-});
-
-const app=express();
 app.use(cors(corsOptions));
-
-// Only parse JSON and URL-encoded bodies for non-upload routes.
-app.use((req, res, next) => {
-  if (req.originalUrl.startsWith('/api/upload')) {
-    // Skip JSON parsing for upload routes (handled by multer)
-    next();
-  } else {
-    express.json({ limit: "50mb" })(req, res, next);
-  }
-});
-app.use((req, res, next) => {
-  if (req.originalUrl.startsWith('/api/upload')) {
-    // Skip URL-encoded parsing for upload routes (handled by multer)
-    next();
-  } else {
-    express.urlencoded({ limit: "50mb", extended: true })(req, res, next);
-  }
-});
-
-// CORS should be first
-app.use(cookieParser())
-
-
-
-
-// Body parsing middleware
-//app.use(express.json())
-//app.use(express.urlencoded({extended:true}))
-
-
-
-
-// Security middleware
+app.use(cookieParser());
 app.use(securityHeaders);
 app.use(xssProtection);
 app.use(limiter);
 
+// Handle file uploads separately
+app.use((req, res, next) => {
+  if (!req.originalUrl.startsWith("/api/upload")) {
+    express.json({ limit: "50mb" })(req, res, next);
+  } else {
+    next();
+  }
+});
+
+app.use((req, res, next) => {
+  if (!req.originalUrl.startsWith("/api/upload")) {
+    express.urlencoded({ extended: true, limit: "50mb" })(req, res, next);
+  } else {
+    next();
+  }
+});
 
 // Static files
+const __dirname = path.resolve();
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Create uploads directory if it doesn't exist
+// API Routes
+app.use("/api/users", userRoutes);
+app.use("/api/category", categoryRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/orders", orderRoutes);
 
-// API routes
-app.use("/api/users",userRoutes);
-app.use("/api/category",categoryRoutes)
-app.use("/api/products", productRoutes)
-app.use('/api/upload', uploadRoutes);
-app.use("/api/orders",orderRoutes)
-
-app.get("/api/config/paypal",(req,res)=>{
-    res.send({clientId:process.env.PAYPAL_CLIENT_ID});
+// PayPal config
+app.get("/api/config/paypal", (req, res) => {
+  res.send({ clientId: process.env.PAYPAL_CLIENT_ID });
 });
 
-app.get('/api-docs', (req, res) => {
+// API documentation
+app.get("/api-docs", (req, res) => {
   res.json({
-    apiVersion: '1.0',
+    apiVersion: "1.0",
     endpoints: {
-      users: '/api/users',
-      categories: '/api/category',
-      products: '/api/products',
-      orders: '/api/orders',
-      upload: '/api/upload'
-    }
+      users: "/api/users",
+      categories: "/api/category",
+      products: "/api/products",
+      orders: "/api/orders",
+      upload: "/api/upload",
+    },
   });
 });
-const __dirname=path.resolve()
-app.use("/uploads",express.static(path.join(__dirname + "uploads")));
+
+console.log("Cloudinary Config:", {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET?.slice(-4), // Show only last 4 chars
+});
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message 
+  res.status(500).json({
+    message:
+      process.env.NODE_ENV === "production"
+        ? "Internal Server Error"
+        : err.message,
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: "Route not found" });
 });
 
-app.listen(port,()=>console.log(`server is running on port  ${port}`))
-    
+// Initialize database and start server
+connectDB().then(async () => {
+  try {
+    await initializeTables();
+    console.log("Database tables initialized");
+    app.listen(port, () => console.log(`Server running on port ${port}`));
+  } catch (error) {
+    console.error("Error initializing tables:", error);
+  }
+});
+
+export default app;

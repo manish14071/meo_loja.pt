@@ -50,18 +50,23 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     uploadProductImage: builder.mutation({
-      query: (data) => {
-        console.log('uploadProductImage called with:', data);
-        for (let [key, value] of data.entries()) {
-          console.log(key, value);
-        }
-        return {
-          url: `${UPLOAD_URL}`,
-          method: 'POST',
-          body: data,
-          
-        };
-      },
+      query: (data) => ({
+        url: `${UPLOAD_URL}`,  // Use the constant from your config
+        method: 'POST',
+        body: data,
+        formData: true,
+        // Remove any content-type header to let browser set it with boundary
+        prepareHeaders: (headers) => {
+          headers.delete('Content-Type');
+          return headers;
+        },
+      }),
+      // Transform the response to match what the component expects
+      transformResponse: (response) => ({
+        image: response.image,
+        message: response.message
+      }),
+      invalidatesTags: ['Product'],
     }),
 
     getTopProducts: builder.query({
