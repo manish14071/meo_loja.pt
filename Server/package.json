@@ -5,9 +5,9 @@
   "description": "E-commerce API with PostgreSQL",
   "main": "index.js",
   "scripts": {
-   
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "test:deploy": "node tests/deployment-test.js",
     "watch": "nodemon --watch './**/*.js' index.js"
   },
   "keywords": [],

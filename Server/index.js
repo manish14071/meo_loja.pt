@@ -35,7 +35,8 @@ const port = process.env.PORT || 3267;
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(securityHeaders);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(xssProtection);
 app.use(limiter);
 
@@ -136,7 +137,7 @@ app.use("/api/orders", orderRoutes);
 app.get('/', (req, res) => {
   res.json({
     message: 'Meo-Loja API is running',
-    docs: '/api-docs',
+    documentation: '/api-docs',
     health: '/health'
   });
 });
@@ -149,18 +150,21 @@ console.log("Cloudinary Config:", {
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message:
-      process.env.NODE_ENV === "production"
-        ? "Internal Server Error"
-        : err.message,
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+  res.status(404).json({ 
+    status: 'error',
+    message: 'Route not found',
+    path: req.originalUrl
+  });
 });
 
 // Initialize database and start server

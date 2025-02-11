@@ -11,21 +11,7 @@ export const limiter = rateLimit({
 
 // Security headers
 export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "https:", "data:", "blob:", "*.cloudinary.com"],
-      connectSrc: ["'self'", 
-        "https://peppy-rolypoly-0bcae4.netlify.app",
-        "https://meo-loja-pt.onrender.com",
-        "*.cloudinary.com"
-      ],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'", "https:", "data:"],
-      formAction: ["'self'"],
-    }
-  },
+  contentSecurityPolicy: false, // Disable CSP temporarily for debugging
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" }
 });
@@ -33,22 +19,26 @@ export const securityHeaders = helmet({
 // XSS Protection
 export const xssProtection = xss();
 
-// CORS options
+// CORS options with function to handle dynamic origins
 export const corsOptions = {
-  origin: [
-    'https://peppy-rolypoly-0bcae4.netlify.app',
-    'https://meo-loja-pt.onrender.com',
-    'http://localhost:5173'
-  ],
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'https://peppy-rolypoly-0bcae4.netlify.app',
+      'https://meo-loja-pt.onrender.com',
+      'http://localhost:5173',
+      'http://localhost:3267'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Origin',
-    'Accept',
-    'X-Requested-With'
-  ],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
   exposedHeaders: ['Set-Cookie'],
   optionsSuccessStatus: 200
 };
