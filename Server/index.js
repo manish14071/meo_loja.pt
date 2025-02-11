@@ -84,11 +84,24 @@ app.get("/api/config/paypal", (req, res) => {
   res.send({ clientId: process.env.PAYPAL_CLIENT_ID });
 });
 
-// API documentation
-app.get("/api-docs", (req, res) => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    environment: process.env.NODE_ENV,
+    time: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// API documentation - move this before error handlers
+app.get('/api-docs', (req, res) => {
   res.json({
     name: "Meo-Loja API",
     version: "1.0.0",
+    baseUrl: process.env.NODE_ENV === 'production' 
+      ? 'https://meo-loja-pt.onrender.com/api'
+      : 'http://localhost:3267/api',
     endpoints: {
       auth: {
         login: "POST /api/users/auth",
@@ -119,7 +132,17 @@ app.get("/api-docs", (req, res) => {
         image: "POST /api/upload"
       }
     },
-    serverTime: new Date().toISOString()
+    serverTime: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Root route for API
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Meo-Loja API is running',
+    docs: '/api-docs',
+    health: '/health'
   });
 });
 
