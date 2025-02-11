@@ -7,17 +7,16 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://meo-loja-pt.onrender.com/',
+        target: 'http://localhost:3267',
         changeOrigin: true,
-        secure: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      },
+      '/uploads': {
+        target: 'http://localhost:3267',
       }
-    },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-  },
-  define: {
-    'process.env.VITE_API_URL': JSON.stringify('https://meo-loja-pt.onrender.com')
+    }
   }
-});
+})
+

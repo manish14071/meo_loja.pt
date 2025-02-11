@@ -23,8 +23,6 @@ export const xssProtection = xss();
 export const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
-      'https://peppy-rolypoly-0bcae4.netlify.app',
-      'https://meo-loja-pt.onrender.com',
       'http://localhost:5173',
       'http://localhost:3267'
     ];

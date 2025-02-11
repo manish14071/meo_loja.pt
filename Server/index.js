@@ -35,9 +35,10 @@ const port = process.env.PORT || 3267;
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
+app.use(securityHeaders);
+app.use(xssProtection);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(xssProtection);
 app.use(limiter);
 
 // Add production middleware

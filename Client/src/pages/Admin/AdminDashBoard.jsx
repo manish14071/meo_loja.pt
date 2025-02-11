@@ -6,6 +6,7 @@ import { FaUsers, FaClipboardList, FaShoppingCart, FaUserShield } from "react-ic
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { formatDate } from "../../utils/formatDate"
+import Loader from "../../components/Loader"
 
 
 const AdminDashboard = () => {
