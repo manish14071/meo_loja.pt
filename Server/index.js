@@ -39,6 +39,18 @@ app.use(securityHeaders);
 app.use(xssProtection);
 app.use(limiter);
 
+// Add production middleware
+if (process.env.NODE_ENV === 'production') {
+  // Security headers for production
+  app.use((req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
+}
+
 // Handle file uploads separately
 app.use((req, res, next) => {
   if (!req.originalUrl.startsWith("/api/upload")) {
@@ -75,14 +87,39 @@ app.get("/api/config/paypal", (req, res) => {
 // API documentation
 app.get("/api-docs", (req, res) => {
   res.json({
-    apiVersion: "1.0",
+    name: "Meo-Loja API",
+    version: "1.0.0",
     endpoints: {
-      users: "/api/users",
-      categories: "/api/category",
-      products: "/api/products",
-      orders: "/api/orders",
-      upload: "/api/upload",
+      auth: {
+        login: "POST /api/users/auth",
+        register: "POST /api/users",
+        logout: "POST /api/users/logout",
+        profile: "GET /api/users/profile"
+      },
+      products: {
+        list: "GET /api/products",
+        single: "GET /api/products/:id",
+        create: "POST /api/products",
+        update: "PUT /api/products/:id",
+        delete: "DELETE /api/products/:id"
+      },
+      categories: {
+        list: "GET /api/category",
+        create: "POST /api/category",
+        update: "PUT /api/category/:id",
+        delete: "DELETE /api/category/:id"
+      },
+      orders: {
+        list: "GET /api/orders",
+        create: "POST /api/orders",
+        getById: "GET /api/orders/:id",
+        updateToPaid: "PUT /api/orders/:id/pay"
+      },
+      upload: {
+        image: "POST /api/upload"
+      }
     },
+    serverTime: new Date().toISOString()
   });
 });
 
