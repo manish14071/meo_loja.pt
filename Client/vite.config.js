@@ -7,18 +7,14 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3267',
-        changeOrigin: true,
-        secure: true,
-        ws: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
-      },
-      '/uploads': {
-        target: process.env.VITE_API_URL || 'http://localhost:3267',
+        target: 'https://meo-loja-pt-d4sy.onrender.com',
         changeOrigin: true,
         secure: true,
       }
     }
+  },
+  define: {
+    'process.env.VITE_API_URL': JSON.stringify('https://meo-loja-pt-d4sy.onrender.com')
   }
 })
 
